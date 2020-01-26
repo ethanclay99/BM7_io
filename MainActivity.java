@@ -1,6 +1,8 @@
 package com.example.geoio;
 
+import android.Manifest;
 import android.content.Context;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,14 +11,17 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+
 
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback {
     //The google map
@@ -27,36 +32,29 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private Button playButton;
     private TextView username;
     private MyLocationManager locationManager;
+    private LatLng newLocation;
 
     //String to be sent up as the player's username
     private String uName;
-//
-//    private Timer timer;
-//    private TimerTask timerTask = new TimerTask() {
-//
-//        @Override
-//        public void run() {
-//            final Random random = new Random();
-//            int i = random.nextInt(2 - 0 + 1) + 0;
-//        }
-//    };
-//
-//    public void start() {
-//        if(timer != null) {
-//            return;
-//        }
-//        timer = new Timer();
-//        timer.scheduleAtFixedRate(timerTask, 0, 2000);
-//    }
-//
-//    public void stop() {
-//        timer.cancel();
-//        timer = null;
-//    }
+    private double longitude;
+    private double latitude;
+    private String color;
+    private double radius = 2;
+    private int count;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        count = 0;
+
+        // foreground only or targeting API level 28 and lower
+        ActivityCompat.requestPermissions(this, new String[]
+                { Manifest.permission.ACCESS_FINE_LOCATION }, 1);
+
+        // background and targeting API level 29 and higher
+        ActivityCompat.requestPermissions(this, new String[]
+                        { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION },
+                1);
 
         //Stuff for instantiating the Map
         setContentView(R.layout.activity_main);
@@ -78,6 +76,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        //Gameplay loop of 5 seconds
         final Handler handler = new Handler();
         Runnable run = new Runnable() {
             @Override
@@ -102,19 +101,28 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        mMap.setMaxZoomPreference(20);
+        mMap.setMinZoomPreference(17);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(40.427568, -86.9213988)));
+        mMap.getUiSettings().setAllGesturesEnabled(false);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
     }
+
 
     // Moves map camera center to whatever coordinates are entered. (Player)
     public void updateMapLocation() {
-        double lat = locationManager.getLatitude();
-        double lon = locationManager.getLongitude();
-        System.out.println("Latitude:" + lat);
-        System.out.println("Longitude:" + lon);
-        LatLng newLocation = new LatLng(lat, lon);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(newLocation));
+        String[] coords = locationManager.getLocation(this);
+        if (coords[0] != null) {
+            latitude = Double.parseDouble(coords[0]);
+            longitude = Double.parseDouble(coords[1]);
+            System.out.println("Latitude:" + latitude);
+            System.out.println("Longitude:" + longitude);
+            newLocation = new LatLng(latitude, longitude);
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(newLocation));
+            //mMap.addMarker(new MarkerOptions().position(newLocation).title("Berat \"Big gay\" Koc"));
+            count++;
+            mMap.clear();
+            mMap.addCircle(new CircleOptions().center(newLocation).fillColor(Color.GREEN).radius(radius));
+        }
     }
 }
